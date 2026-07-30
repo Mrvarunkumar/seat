@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom Database — SESAS</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+
+  <div class="main">
+    <div id="topbar-mount"></div>
+
+    <div class="main-content">
+      <div class="card-grid" style="grid-template-columns: repeat(3,1fr); margin-bottom:20px;">
+        <div class="stat-card fade-up">
+          <div class="stat-label">Total Rooms</div>
+          <div class="stat-value" id="roomCount">0</div>
+        </div>
+        <div class="stat-card fade-up fade-up-1">
+          <div class="stat-label">Total Capacity</div>
+          <div class="stat-value" id="totalCapacity">0</div>
+          <div class="stat-sub">seats across all rooms</div>
+        </div>
+        <div class="stat-card fade-up fade-up-2">
+          <div class="stat-label">Bench Modes</div>
+          <div class="stat-value" style="font-size:16px; padding-top:6px;">1 or 2 / bench</div>
+        </div>
+      </div>
+
+      <div class="panel fade-up fade-up-2">
+        <div class="panel-head">
+          <div><h3>Classroom Database</h3><p class="text-sm text-soft">Rooms available for exam seating</p></div>
+          <button class="btn btn-primary btn-sm" id="addRoomBtn">+ Add Room</button>
+        </div>
+        <div class="table-wrap">
+          <table id="roomTable">
+            <thead><tr><th>Room</th><th>Rows × Columns</th><th>Capacity</th><th>Bench Mode</th><th>Actions</th></tr></thead>
+            <tbody id="roomTbody"></tbody>
+          </table>
+        </div>
+        <div id="roomEmpty" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+  requireAuth();
+  window.ACTIVE_PAGE = 'classrooms';
+  window.PAGE_TITLE = 'Classroom Database';
+  window.PAGE_EYEBROW = 'Setup';
+</script>
+<script src="components/sidebar.js"></script>
+<script src="components/navbar.js"></script>
+<script src="components/cards.js"></script>
+<script src="components/modal.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('roomEmpty').innerHTML = emptyState({
+      title: 'No classrooms added',
+      desc: 'Add the halls you plan to use so the generator knows their capacity.',
+      actionHtml: '<button class="btn btn-primary btn-sm" onclick="openAddRoom()">+ Add Room</button>'
+    });
+  });
+</script>
+<script src="js/classroom.js"></script>
+</body>
+</html>

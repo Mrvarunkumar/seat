@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports — SESAS</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script src="js/theme.js"></script>
+<style>
+  .report-tabs { display:flex; gap:8px; margin-bottom:20px; }
+  .report-tab { padding:9px 16px; border-radius:20px; font-size:13px; font-weight:600; border:1.5px solid var(--line); background:var(--white); color:var(--ink-soft); }
+  .report-tab.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .report-letterhead { text-align:center; margin-bottom:24px; padding-bottom:18px; border-bottom:2px solid var(--ink); }
+  .report-letterhead h2 { font-size:20px; }
+
+  /* ===== VTU Form B Styles ===== */
+  .form-b-page {
+    font-family: 'Times New Roman', Times, serif;
+    max-width: 780px;
+    margin: 0 auto 40px;
+    padding: 24px;
+    border: 1px solid #ccc;
+    background: white;
+    color: #000;
+    font-size: 11pt;
+    line-height: 1.4;
+    box-sizing: border-box;
+  }
+  .fb-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .fb-header-left { flex-shrink: 0; }
+  .fb-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+  .fb-header-center { flex: 1; text-align: center; }
+  .fb-uni-name {
+    font-size: 14pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  .fb-report-title {
+    font-size: 10pt;
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .fb-exam-name {
+    font-size: 10pt;
+  }
+  .fb-header-right {
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .fb-form-label {
+    font-size: 16pt;
+    font-weight: bold;
+    border: 2px solid #000;
+    padding: 4px 12px;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+  .fb-block-row {
+    font-size: 10pt;
+    margin-top: 6px;
+  }
+  .fb-block-text { font-weight: bold; }
+  .fb-block-input {
+    border-bottom: 1px solid #000;
+    display: inline-block;
+    min-width: 80px;
+    margin-left: 4px;
+  }
+
+  /* Info Table */
+  .fb-info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 10.5pt;
+  }
+  .fb-info-table td {
+    border: 1px solid #000;
+    padding: 5px 8px;
+  }
+  .fb-info-label {
+    font-weight: bold;
+    width: 22%;
+    background: #f5f5f5;
+  }
+  .fb-info-value {
+    width: 28%;
+  }
+
+  /* Attendance Table */
+  .fb-attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+    font-size: 10pt;
+    table-layout: fixed;
+  }
+  .fb-attendance-table th,
+  .fb-attendance-table td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    text-align: left;
+  }
+  .fb-attendance-table th {
+    font-weight: bold;
+    text-align: center;
+    font-size: 9pt;
+    line-height: 1.3;
+    vertical-align: middle;
+  }
+  .fb-attendance-table td {
+    height: 22px;
+    vertical-align: middle;
+  }
+  .fb-center { text-align: center; }
+  .fb-col-sl { width: 6%; text-align: center; }
+  .fb-col-usn { width: 16%; }
+  .fb-col-booklet { width: 20%; }
+  .fb-col-sig { width: 16%; }
+  .fb-col-addl { width: 28%; }
+  .fb-col-total { width: 14%; }
+
+  /* Absentee Section */
+  .fb-absentee-section {
+    margin: 12px 0;
+    font-size: 10pt;
+  }
+  .fb-absentee-line {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .fb-absentee-label {
+    font-weight: bold;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+  .fb-absentee-dots {
+    flex: 1;
+    border-bottom: 1px solid #000;
+    min-height: 1em;
+  }
+
+  /* Signature Section */
+  .fb-signature-section {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0 16px;
+    gap: 16px;
+  }
+  .fb-sig-block {
+    flex: 1;
+    font-size: 9.5pt;
+  }
+  .fb-sig-title {
+    font-weight: bold;
+    text-decoration: underline;
+    margin-bottom: 8px;
+    font-size: 9.5pt;
+  }
+  .fb-sig-line {
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+
+  /* Footer */
+  .fb-footer {
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1px solid #999;
+    font-size: 9pt;
+  }
+  .fb-footer-note {
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-size: 9.5pt;
+  }
+  .fb-footer-sub {
+    font-style: italic;
+    margin-bottom: 2px;
+    color: #333;
+  }
+
+  /* Print Styles for Form B */
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 1.27cm;
+    }
+    body {
+      font-family: 'Times New Roman', Times, serif !important;
+      background: white !important;
+      color: black !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .sidebar, .topbar, .sidebar-toggle, .no-print, .report-tabs { display: none !important; }
+    .main { margin-left: 0 !important; padding: 0 !important; }
+    .main-content { padding: 0 !important; max-width: none !important; }
+    .app-shell { display: block !important; }
+
+    .form-b-page {
+      border: none;
+      padding: 0;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      page-break-after: always;
+      page-break-inside: avoid;
+    }
+    .form-b-page:last-child { page-break-after: auto; }
+
+    .fb-attendance-table {
+      table-layout: fixed;
+      width: 100%;
+    }
+    .fb-attendance-table th,
+    .fb-attendance-table td,
+    .fb-info-table td {
+      border-color: black !important;
+      color: black !important;
+    }
+    .fb-info-table { width: 100%; }
+    .fb-info-label { background: #f0f0f0 !important; }
+    .fb-logo { width: 50px; height: 50px; }
+    .fb-signature-section { page-break-inside: avoid; }
+    .fb-header { flex-wrap: wrap; gap: 8px; }
+    .fb-uni-name { font-size: 12pt; }
+    .fb-form-label { font-size: 14pt; padding: 3px 10px; }
+    .fb-attendance-table th { font-size: 8pt; padding: 3px 4px; }
+    .fb-attendance-table td { padding: 2px 4px; height: 18px; font-size: 9pt; }
+    .fb-info-table td { padding: 3px 6px; font-size: 9pt; }
+    .fb-col-sl { width: 6%; }
+    .fb-col-usn { width: 18%; }
+    .fb-col-booklet { width: 18%; }
+    .fb-col-sig { width: 16%; }
+    .fb-col-addl { width: 28%; }
+    .fb-col-total { width: 14%; }
+    .fb-signature-section { margin: 12px 0 10px; gap: 12px; }
+    .fb-sig-block { font-size: 8.5pt; }
+    .fb-footer { margin-top: 10px; padding-top: 6px; }
+    .fb-footer-note { font-size: 8.5pt; }
+    .fb-footer-sub { font-size: 8pt; }
+    .fb-absentee-section { font-size: 9pt; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+
+  <div class="main">
+    <div id="topbar-mount"></div>
+
+    <div class="main-content">
+      <div class="flex-between mb-16 no-print">
+        <div class="report-tabs">
+          <button class="report-tab active" data-tab="room">Room Wise PDF</button>
+          <button class="report-tab" data-tab="formb">Form B (VTU)</button>
+          <button class="report-tab" data-tab="invigilator">Invigilator Report</button>
+        </div>
+        <div class="flex gap-8">
+          <button class="btn btn-outline btn-sm" id="exportCsvBtn">Export CSV</button>
+          <button class="btn btn-primary btn-sm" id="printBtn">Print / Save PDF</button>
+        </div>
+      </div>
+
+      <div id="reportContent"></div>
+      <div id="noArrangement"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+  requireAuth();
+  window.ACTIVE_PAGE = 'reports';
+  window.PAGE_TITLE = 'Reports';
+  window.PAGE_EYEBROW = 'Generate';
+</script>
+<script src="components/sidebar.js"></script>
+<script src="components/navbar.js"></script>
+<script src="components/cards.js"></script>
+<script src="components/modal.js"></script>
+<script src="js/seating.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('noArrangement').innerHTML = emptyState({
+      title: 'No arrangement generated yet',
+      desc: 'Run the generator first, then come back here for VTU Form B and other reports.',
+      actionHtml: `<a class="btn btn-primary btn-sm" href="generate.html">Go to Generate Seating</a>`
+    });
+  });
+</script>
+<script src="js/reports.js"></script>
+</body>
+</html>

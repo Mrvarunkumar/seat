@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SESAS — Smart Exam Seat Arrangement System</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script src="js/theme.js"></script>
+<style>
+  .landing-nav { display:flex; align-items:center; justify-content:space-between; padding:20px 48px; max-width:1280px; margin:0 auto; }
+  .landing-nav .brand { display:flex; align-items:center; gap:10px; }
+  .landing-nav .brand .mark { width:32px; height:32px; border-radius:8px; background:var(--brass); display:grid; grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(2,1fr); gap:3px; padding:6px; }
+  .landing-nav .brand .mark span { background: var(--ink); border-radius:1.5px; }
+  .landing-nav .brand .name { font-family: var(--font-display); font-weight:700; font-size:16px; }
+  .landing-nav .links { display:flex; gap:28px; font-size:13.5px; font-weight:500; color: var(--ink-soft); }
+  .landing-nav .links a:hover { color: var(--ink); }
+
+  .hero { max-width:1280px; margin:0 auto; padding:64px 48px 40px; display:grid; grid-template-columns: 1.05fr 0.95fr; gap:56px; align-items:center; }
+  .hero .eyebrow { font-family: var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.09em; color: var(--brass-dark); background: var(--brass-tint); display:inline-block; padding:6px 12px; border-radius:20px; margin-bottom:20px; }
+  .hero h1 { font-size:46px; line-height:1.1; letter-spacing:-0.02em; }
+  .hero h1 em { font-style: normal; color: var(--brass-dark); }
+  .hero p.lead { font-size:16px; color: var(--ink-soft); margin-top:18px; max-width:480px; line-height:1.65; }
+  .hero .cta-row { display:flex; gap:14px; margin-top:30px; }
+  .hero .stats-row { display:flex; gap:32px; margin-top:44px; padding-top:28px; border-top:1px solid var(--line); }
+  .hero .stats-row .s-val { font-family: var(--font-display); font-size:24px; font-weight:700; }
+  .hero .stats-row .s-lbl { font-size:12px; color: var(--ink-soft); margin-top:2px; }
+
+  /* Signature: a live-feeling seat map that fills in on load, the literal
+     product output rendered as the hero image itself. */
+  .hero-seatmap { background: var(--ink); border-radius: var(--radius-lg); padding: 28px; position: relative; overflow: hidden; box-shadow: var(--shadow-lg); }
+  .hero-seatmap .hs-head { display:flex; align-items:center; justify-content:space-between; color: var(--paper); position:relative; z-index:2; margin-bottom:18px; }
+  .hero-seatmap .hs-head .rn { font-family: var(--font-mono); font-size:12px; color: var(--brass-tint); }
+  .hero-seatmap .grid8 { display:grid; grid-template-columns: repeat(8,1fr); gap:6px; position:relative; z-index:2; }
+  .hero-seatmap .grid8 i { display:block; aspect-ratio:1; border-radius:4px; background: rgba(247,245,240,0.08); animation: seatfill 3s ease-in-out infinite; animation-delay: calc(var(--d)*40ms); }
+  @keyframes seatfill { 0%,40%{background:rgba(247,245,240,0.08);} 55%,85%{background:var(--brass);} 100%{background:rgba(247,245,240,0.08);} }
+  .hero-seatmap::after { content:''; position:absolute; inset:0; background-image: radial-gradient(rgba(247,245,240,0.05) 1px, transparent 1px); background-size:20px 20px; }
+  .hero-seatmap .legend { display:flex; gap:16px; margin-top:18px; position:relative; z-index:2; }
+  .hero-seatmap .legend span { font-size:11px; color: rgba(247,245,240,0.6); display:flex; align-items:center; gap:6px; }
+  .hero-seatmap .legend i { width:8px; height:8px; border-radius:2px; background: var(--brass); display:inline-block; }
+
+  .section { max-width:1280px; margin:0 auto; padding:64px 48px; }
+  .section-head { max-width:560px; margin-bottom:40px; }
+  .section-head .eyebrow { font-family: var(--font-mono); font-size:11.5px; text-transform:uppercase; letter-spacing:0.08em; color: var(--brass-dark); margin-bottom:10px; display:block; }
+  .section-head h2 { font-size:30px; letter-spacing:-0.01em; }
+  .section-head p { color: var(--ink-soft); margin-top:10px; font-size:14.5px; }
+
+  .flow-steps { display:grid; grid-template-columns: repeat(4,1fr); gap:16px; }
+  .flow-step { background: var(--white); border:1px solid var(--line); border-radius: var(--radius-lg); padding:22px; }
+  .flow-step .fs-num { font-family: var(--font-mono); font-size:12px; color: var(--brass-dark); }
+  .flow-step h4 { font-size:15px; margin-top:10px; }
+  .flow-step p { font-size:12.5px; color: var(--ink-soft); margin-top:6px; line-height:1.55; }
+
+  .users-grid { display:grid; grid-template-columns: repeat(4,1fr); gap:16px; }
+  .user-card { background: var(--parchment); border-radius: var(--radius-lg); padding:22px; }
+  .user-card .uc-ico { width:38px; height:38px; border-radius:9px; background: var(--white); display:flex; align-items:center; justify-content:center; color: var(--brass-dark); margin-bottom:14px; }
+  .user-card h4 { font-size:14.5px; }
+  .user-card p { font-size:12px; color: var(--ink-soft); margin-top:5px; }
+
+  .rules-preview { background: var(--ink); border-radius: var(--radius-lg); padding:40px; color: var(--paper); display:grid; grid-template-columns: 1fr 1fr; gap:40px; align-items:center; }
+  .rules-preview h3 { color: var(--white); font-size:24px; }
+  .rules-preview p { color: rgba(247,245,240,0.68); font-size:13.5px; margin-top:10px; line-height:1.6; }
+  .rules-list { display:flex; flex-direction:column; gap:10px; }
+  .rules-list .rl { display:flex; align-items:center; gap:10px; font-size:13px; padding:11px 14px; background: rgba(247,245,240,0.06); border-radius: var(--radius-sm); border:1px solid rgba(247,245,240,0.12); }
+  .rules-list .rl svg { flex-shrink:0; color: var(--brass); }
+
+  .cta-band { background: var(--brass-tint); border-radius: var(--radius-lg); padding:48px; text-align:center; margin: 0 48px 64px; max-width:1184px; margin-inline:auto; }
+  .cta-band h3 { font-size:26px; }
+  .cta-band p { color: var(--ink-soft); margin-top:8px; margin-bottom:22px; }
+
+  .landing-foot { border-top:1px solid var(--line); padding:28px 48px; display:flex; align-items:center; justify-content:space-between; max-width:1280px; margin:0 auto; font-size:12.5px; color: var(--ink-soft); }
+
+  @media (max-width: 980px) {
+    .hero, .rules-preview { grid-template-columns: 1fr; }
+    .flow-steps, .users-grid { grid-template-columns: repeat(2,1fr); }
+    .landing-nav .links { display:none; }
+  }
+  @media (max-width: 640px) {
+    .hero h1 { font-size:32px; }
+    .flow-steps, .users-grid { grid-template-columns: 1fr; }
+    .hero, .section, .landing-nav, .landing-foot { padding-left:20px; padding-right:20px; }
+  }
+</style>
+</head>
+<body>
+
+  <nav class="landing-nav">
+    <a href="index.html" class="brand">
+      <span class="mark"><span></span><span></span><span></span><span></span></span>
+      <span class="name">SESAS</span>
+    </a>
+    <button type="button" class="theme-toggle-landing" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Toggle dark mode">
+      <svg class="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="theme-icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+    <div class="links">
+      <a href="#flow">How it works</a>
+      <a href="#users">Who it's for</a>
+      <a href="#rules">Seating rules</a>
+      <a href="student-search.html">Student search</a>
+    </div>
+    <a href="login.html" class="btn btn-dark btn-sm">Admin Login</a>
+  </nav>
+
+  <header class="hero">
+    <div class="fade-up">
+      <span class="eyebrow">For VTU colleges, universities &amp; schools</span>
+      <h1>Generate fair exam seating <em>in one click.</em></h1>
+      <p class="lead">Stop spending hours arranging 1,000–5,000 students by hand. Upload your student list and classrooms, set your rules, and SESAS builds a conflict-free seating plan in under ten seconds.</p>
+      <div class="cta-row">
+        <a href="login.html" class="btn btn-primary">Open Admin Dashboard</a>
+        <a href="student-search.html" class="btn btn-outline">Find my seat</a>
+      </div>
+      <div class="stats-row">
+        <div><div class="s-val">5,000+</div><div class="s-lbl">students per run</div></div>
+        <div><div class="s-val">&lt;10s</div><div class="s-lbl">to generate</div></div>
+        <div><div class="s-val">9</div><div class="s-lbl">configurable rules</div></div>
+      </div>
+    </div>
+
+    <div class="hero-seatmap fade-up fade-up-2">
+      <div class="hs-head">
+        <strong>Room 101</strong>
+        <span class="rn mono">30 / 30 seated</span>
+      </div>
+      <div class="grid8" id="heroGrid"></div>
+      <div class="legend">
+        <span><i></i> Seat filled</span>
+        <span style="opacity:.5"><i style="background:rgba(247,245,240,0.15)"></i> Empty</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="section" id="flow">
+    <div class="section-head">
+      <span class="eyebrow">The flow</span>
+      <h2>From spreadsheet to seat slip</h2>
+      <p>Every exam follows the same six steps — no manual chart-drawing required.</p>
+    </div>
+    <div class="flow-steps">
+      <div class="flow-step fade-up"><div class="fs-num">01</div><h4>Upload students</h4><p>Import USN, name, branch and semester from an Excel sheet or paste rows directly.</p></div>
+      <div class="flow-step fade-up fade-up-1"><div class="fs-num">02</div><h4>Upload classrooms</h4><p>Define rows, columns and bench capacity for every hall you'll use.</p></div>
+      <div class="flow-step fade-up fade-up-2"><div class="fs-num">03</div><h4>Set seating rules</h4><p>Toggle branch separation, adjacency checks, and fill preferences.</p></div>
+      <div class="flow-step fade-up fade-up-3"><div class="fs-num">04</div><h4>Generate &amp; export</h4><p>Get seat numbers, hall allocation, attendance sheets and PDF/Excel reports.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="users">
+    <div class="section-head">
+      <span class="eyebrow">Built for the whole exam cell</span>
+      <h2>Four roles, one system</h2>
+    </div>
+    <div class="users-grid">
+      <div class="user-card fade-up">
+        <div class="uc-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"/></svg></div>
+        <h4>Super Admin</h4><p>College principal — full visibility across departments and exams.</p>
+      </div>
+      <div class="user-card fade-up fade-up-1">
+        <div class="uc-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+        <h4>Exam Coordinator</h4><p>Creates examinations, sets rules and runs the seating generator.</p>
+      </div>
+      <div class="user-card fade-up fade-up-2">
+        <div class="uc-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/></svg></div>
+        <h4>Department Staff</h4><p>Uploads and maintains the student database for their branch.</p>
+      </div>
+      <div class="user-card fade-up fade-up-3">
+        <div class="uc-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg></div>
+        <h4>Students</h4><p>Search their USN to instantly find their room, bench and seat.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="rules">
+    <div class="rules-preview">
+      <div>
+        <span class="eyebrow" style="color:var(--brass)">Seating rules engine</span>
+        <h3>Rules your coordinator already enforces by hand — automated.</h3>
+        <p>Enable or disable each rule per exam. SESAS validates every seat against its neighbours before placing a student, and logs an exception whenever a rule has to be relaxed.</p>
+        <a href="login.html" class="btn btn-primary mt-24">Configure rules</a>
+      </div>
+      <div class="rules-list">
+        <div class="rl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> No same branch left or right</div>
+        <div class="rl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> No same branch front or back</div>
+        <div class="rl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Round-robin branch rotation</div>
+        <div class="rl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Fill rooms completely, no empty benches</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="cta-band">
+    <h3>Ready to retire the whiteboard chart?</h3>
+    <p>Log in and generate your first seating arrangement in minutes.</p>
+    <a href="login.html" class="btn btn-primary">Get started</a>
+  </div>
+
+  <footer class="landing-foot">
+    <span>© 2026 SESAS — Smart Exam Seat Arrangement System</span>
+    <span>Built for VTU colleges, universities &amp; schools</span>
+  </footer>
+
+<script>
+  syncToggleUI(getTheme());
+</script>
+<script>
+  const grid = document.getElementById('heroGrid');
+  for (let i = 0; i < 32; i++) {
+    const el = document.createElement('i');
+    el.style.setProperty('--d', i);
+    grid.appendChild(el);
+  }
+</script>
+</body>
+</html>

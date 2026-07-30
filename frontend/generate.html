@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generate Seating — SESAS</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script src="js/theme.js"></script>
+<style>
+  .gen-summary { display:grid; grid-template-columns: repeat(4,1fr); gap:16px; margin-bottom:24px; }
+  .room-block { margin-bottom:24px; }
+  .room-block .rb-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .seat-grid-view { display:grid; gap:6px; }
+  .seat-cell {
+    aspect-ratio: 1; border-radius:5px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family: var(--font-mono); font-size:9.5px; color:white; text-align:center; padding:2px; overflow:hidden;
+    cursor:default; position:relative;
+  }
+  .seat-cell .sc-usn { font-weight:600; font-size:8.5px; line-height:1.1; }
+  .seat-cell .sc-branch { font-size:7.5px; opacity:0.85; }
+  .seat-cell.empty { background: var(--parchment); color: var(--line-dark); }
+  .violation-list { display:flex; flex-direction:column; gap:8px; }
+  .violation-item { display:flex; gap:10px; padding:10px 12px; background: var(--rust-tint); border-radius: var(--radius-sm); font-size:12.5px; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+
+  <div class="main">
+    <div id="topbar-mount"></div>
+
+    <div class="main-content">
+
+      <div class="panel fade-up mb-24">
+        <div class="panel-head">
+          <div><h3>Run the Generator</h3><p>Pick an exam and confirm your data before generating</p></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Examination</label>
+            <select id="examSelect"></select>
+          </div>
+          <div class="field">
+            <label>Data check</label>
+            <div class="flex gap-8" style="padding-top:8px;">
+              <span class="badge badge-neutral" id="studentBadge">0 students</span>
+              <span class="badge badge-neutral" id="roomBadge">0 rooms</span>
+              <span class="badge badge-neutral" id="ruleBadge">0 rules on</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="generateBtn">
+          <span id="genBtnLabel">⚡ Generate Arrangement</span>
+        </button>
+        <span class="text-sm text-soft" id="genTimeLabel" style="margin-left:12px;"></span>
+      </div>
+
+      <div id="resultsWrap" style="display:none;">
+        <div class="gen-summary" id="genSummaryCards"></div>
+
+        <div id="violationsPanel" class="panel mb-24" style="display:none;">
+          <div class="panel-head"><div><h3>Exceptions Logged</h3><p>Seats where a rule had to be relaxed</p></div></div>
+          <div class="violation-list" id="violationList"></div>
+        </div>
+
+        <div class="panel fade-up">
+          <div class="panel-head">
+            <div><h3>Room Preview</h3><p>Hover a seat to see student details</p></div>
+            <div class="flex gap-8">
+              <a href="reports.html" class="btn btn-outline btn-sm">View Reports</a>
+              <a href="analytics.html" class="btn btn-outline btn-sm">View Analytics</a>
+            </div>
+          </div>
+          <div id="roomPreview"></div>
+        </div>
+      </div>
+
+      <div id="noDataState"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+  requireAuth();
+  window.ACTIVE_PAGE = 'generate';
+  window.PAGE_TITLE = 'Generate Seating';
+  window.PAGE_EYEBROW = 'Generate';
+</script>
+<script src="components/sidebar.js"></script>
+<script src="components/navbar.js"></script>
+<script src="components/cards.js"></script>
+<script src="components/modal.js"></script>
+<script src="js/seating.js"></script>
+<script>
+  async function refreshDataCheck() {
+    const [students, rooms, rules, exams] = await Promise.all([
+      Api.getStudents(),
+      Api.getClassrooms(),
+      Api.getRules(),
+      Api.getExams()
+    ]);
+
+    const activeRules = Object.entries(rules).filter(([k, v]) => k !== 'benchMode' && v).length;
+
+    document.getElementById('studentBadge').textContent = `${students.length} students`;
+    document.getElementById('roomBadge').textContent = `${rooms.length} rooms`;
+    document.getElementById('ruleBadge').textContent = `${activeRules} rules on`;
+
+    const select = document.getElementById('examSelect');
+    select.innerHTML = exams.length
+      ? exams.map(e => `<option value="${e.id}">${e.name} — ${e.subjectCode} (${formatDate(e.date)})</option>`).join('')
+      : `<option value="">No exams created yet</option>`;
+
+    const genBtn = document.getElementById('generateBtn');
+    genBtn.disabled = !students.length || !rooms.length;
+    if (!students.length || !rooms.length) {
+      document.getElementById('noDataState').innerHTML = emptyState({
+        title: 'Add students and classrooms first',
+        desc: 'The generator needs at least one student and one classroom before it can build a seating plan.',
+        actionHtml: `<a class="btn btn-primary btn-sm" href="students.html">Go to Student Database</a>`
+      });
+    } else {
+      document.getElementById('noDataState').innerHTML = '';
+    }
+  }
+
+  function renderResults(arrangement) {
+    document.getElementById('resultsWrap').style.display = 'block';
+
+    document.getElementById('genSummaryCards').innerHTML = [
+      statCard({ label: 'Students Seated', value: `${arrangement.seatedCount}/${arrangement.totalStudents}`, sub: arrangement.unseated.length ? `${arrangement.unseated.length} unseated — add capacity` : 'All students placed', subClass: arrangement.unseated.length ? 'warn' : 'up', filledCells: 12 }),
+      statCard({ label: 'Rooms Used', value: arrangement.rooms.length, sub: `${arrangement.totalCapacity} total seats`, filledCells: 6 }),
+      statCard({ label: 'Branches', value: Object.keys(arrangement.branchCounts).length, sub: Object.entries(arrangement.branchCounts).map(([b,c]) => `${b}:${c}`).join('  '), filledCells: 8 }),
+      statCard({ label: 'Rule Exceptions', value: arrangement.violations.length, sub: arrangement.violations.length ? 'Review below' : 'Clean arrangement', subClass: arrangement.violations.length ? 'warn' : 'up', filledCells: arrangement.violations.length ? 3 : 14 }),
+    ].join('');
+
+    const vPanel = document.getElementById('violationsPanel');
+    if (arrangement.violations.length) {
+      vPanel.style.display = 'block';
+      document.getElementById('violationList').innerHTML = arrangement.violations.map(v => `
+        <div class="violation-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--rust)" stroke-width="2" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+          <span>Room ${v.room}, seat ${v.seat} — <strong>${v.student}</strong>: ${v.reason}</span>
+        </div>
+      `).join('');
+    } else {
+      vPanel.style.display = 'none';
+    }
+
+    document.getElementById('roomPreview').innerHTML = arrangement.rooms.map(room => `
+      <div class="room-block">
+        <div class="rb-head">
+          <h4 style="font-family:var(--font-display); font-size:14.5px;">Room ${room.room}</h4>
+          <span class="badge badge-brass">${room.grid.flat().filter(Boolean).length}/${room.capacity} seated</span>
+        </div>
+        <div class="seat-grid-view" style="grid-template-columns: repeat(${room.cols}, 1fr); max-width:${room.cols * 64}px;">
+          ${room.grid.map((row, r) => row.map((s, c) => s ? `
+            <div class="seat-cell seat-placed" style="background:${branchColor(s.branch)}; animation-delay:${(r * room.cols + c) * 12}ms" title="${s.usn} — ${s.name} (${s.branch})">
+              <div class="sc-usn">${s.usn.slice(-4)}</div>
+              <div class="sc-branch">${s.branch}</div>
+            </div>
+          ` : `<div class="seat-cell empty">–</div>`).join('')).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    await refreshDataCheck();
+    const existing = await Api.getArrangement();
+    if (existing) renderResults(existing);
+  });
+
+  document.getElementById('generateBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('generateBtn');
+    const label = document.getElementById('genBtnLabel');
+    btn.disabled = true;
+    label.innerHTML = '<span class="spinner on-dark"></span> Generating…';
+
+    const start = performance.now();
+    setTimeout(async () => {
+      const [students, rooms, rules, exams] = await Promise.all([
+        Api.getStudents(),
+        Api.getClassrooms(),
+        Api.getRules(),
+        Api.getExams()
+      ]);
+      const arrangement = generateSeating(students, rooms, rules);
+      const examSelect = document.getElementById('examSelect');
+      const selectedExam = exams.find(e => e.id === examSelect.value);
+      arrangement.exam = selectedExam || null;
+      await Api.saveArrangement(arrangement);
+      const elapsed = ((performance.now() - start) / 1000).toFixed(2);
+      document.getElementById('genTimeLabel').textContent = `Generated in ${elapsed}s`;
+
+      btn.disabled = false;
+      label.textContent = '⚡ Re-generate Arrangement';
+      renderResults(arrangement);
+      showToast('Seating arrangement generated', 'success');
+    }, 550);
+  });
+</script>
+</body>
+</html>

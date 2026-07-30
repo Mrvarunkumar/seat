@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find My Seat — SESAS</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script src="js/theme.js"></script>
+<style>
+  .search-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:60px 24px; }
+  .search-nav { width:100%; max-width:560px; display:flex; justify-content:space-between; align-items:center; margin-bottom:48px; }
+  .search-nav .brand { display:flex; align-items:center; gap:9px; }
+  .search-nav .brand .mark { width:28px; height:28px; border-radius:7px; background:var(--brass); display:grid; grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(2,1fr); gap:3px; padding:5px; }
+  .search-nav .brand .mark span { background: var(--ink); border-radius:1px; }
+  .search-nav .brand .name { font-family: var(--font-display); font-weight:700; font-size:15px; }
+
+  .search-card { width:100%; max-width:560px; text-align:center; }
+  .search-card h1 { font-size:30px; margin-bottom:10px; }
+  .search-card p.lead { color: var(--ink-soft); font-size:14px; margin-bottom:32px; }
+
+  .search-box { display:flex; gap:10px; }
+  .search-box input { flex:1; padding:14px 16px; font-family: var(--font-mono); font-size:15px; border:2px solid var(--line); border-radius:var(--radius-md); text-transform:uppercase; }
+  .search-box input:focus { outline:none; border-color: var(--brass); }
+
+  .result-card { margin-top:32px; background: var(--white); border:1px solid var(--line); border-radius: var(--radius-lg); padding:32px; text-align:left; box-shadow: var(--shadow-md); }
+  .result-card .rc-usn { font-family: var(--font-mono); font-size:13px; color: var(--brass-dark); margin-bottom:4px; }
+  .result-card .rc-name { font-family: var(--font-display); font-size:22px; margin-bottom:20px; }
+  .result-grid { display:grid; grid-template-columns: repeat(2,1fr); gap:16px; }
+  .result-item { background: var(--parchment); border-radius: var(--radius-sm); padding:14px 16px; }
+  .result-item .ri-label { font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color: var(--ink-soft); font-weight:600; margin-bottom:5px; }
+  .result-item .ri-value { font-family: var(--font-display); font-size:20px; font-weight:700; }
+  .result-item .ri-value.mono { font-family: var(--font-mono); }
+  .not-found { margin-top:24px; padding:18px; background: var(--rust-tint); color: var(--rust); border-radius: var(--radius-md); font-size:13.5px; text-align:left; }
+  .room-preview-card { margin-top:24px; padding:24px; background: var(--parchment); border-radius: var(--radius-md); }
+  .room-preview-card h4 { font-size:14px; font-weight:600; margin-bottom:12px; }
+  .seat-grid { display:grid; gap:5px; max-width:100%; }
+  .seat-grid .sg-cell { aspect-ratio:1; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:8px; color:white; text-align:center; padding:1px; overflow:hidden; }
+  .seat-grid .sg-cell .sg-usn { font-weight:600; font-size:7.5px; line-height:1.1; }
+  .seat-grid .sg-cell .sg-branch { font-size:6.5px; opacity:0.85; }
+  .seat-grid .sg-cell.empty { background: var(--line); color: var(--parchment); }
+  .seat-grid .sg-cell.highlight { outline:3px solid var(--brass); outline-offset:1px; z-index:1; }
+</style>
+</head>
+<body>
+
+<div class="search-wrap">
+  <div class="search-nav">
+    <a href="index.html" class="brand">
+      <span class="mark"><span></span><span></span><span></span><span></span></span>
+      <span class="name">SESAS</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button type="button" class="theme-toggle-landing" onclick="toggleTheme()" aria-label="Toggle dark mode">
+        <svg class="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="theme-icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <a href="login.html" class="btn btn-outline btn-sm">Admin Login</a>
+    </div>
+  </div>
+
+  <div class="search-card fade-up">
+    <h1>Find your exam seat</h1>
+    <p class="lead">Enter your USN to see your room, bench and seat number.</p>
+
+    <form id="searchForm" class="search-box">
+      <input type="text" id="usnInput" placeholder="1RV21CS001" autocomplete="off" required>
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+
+    <div id="resultArea"></div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script src="js/seating.js"></script>
+<script>
+  document.getElementById('searchForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const usn = document.getElementById('usnInput').value.trim().toUpperCase();
+    const resultArea = document.getElementById('resultArea');
+    const arrangement = await Api.getArrangement();
+
+    if (!arrangement) {
+      resultArea.innerHTML = `<div class="not-found">No seating arrangement has been generated yet. Please check back closer to your exam date.</div>`;
+      return;
+    }
+
+    const flat = flattenArrangement(arrangement);
+    const found = flat.find(s => s.usn === usn);
+
+    if (!found) {
+      resultArea.innerHTML = `<div class="not-found">No seat found for <strong>${escapeHtml(usn)}</strong>. Double-check your USN or contact your exam coordinator.</div>`;
+      return;
+    }
+
+    const roomData = arrangement.rooms.find(r => r.room === found.room);
+    let roomGridHtml = '';
+    if (roomData) {
+      roomGridHtml = `
+        <div class="room-preview-card">
+          <h4>Room ${escapeHtml(roomData.room)} — Seat Layout</h4>
+          <div class="seat-grid" style="grid-template-columns: repeat(${roomData.cols}, 1fr); max-width:${Math.min(roomData.cols * 56, 400)}px;">
+            ${roomData.grid.map((row, r) => row.map((s, c) => {
+              const seatLabel = `R${r + 1}C${c + 1}`;
+              const isFound = seatLabel === found.seatLabel;
+              return s ? `
+                <div class="sg-cell${isFound ? ' highlight' : ''}" style="background:${branchColor(s.branch)}; animation-delay:${(r * roomData.cols + c) * 10}ms" title="${s.usn} — ${s.name} (${s.branch})">
+                  <div class="sg-usn">${s.usn.slice(-4)}</div>
+                  <div class="sg-branch">${s.branch}</div>
+                </div>
+              ` : `<div class="sg-cell empty">–</div>`;
+            }).join('')).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    resultArea.innerHTML = `
+      <div class="result-card pop-in">
+        <div class="rc-usn">${found.usn}</div>
+        <div class="rc-name">${escapeHtml(found.name)}</div>
+        <div class="result-grid">
+          <div class="result-item"><div class="ri-label">Room</div><div class="ri-value mono">${found.room}</div></div>
+          <div class="result-item"><div class="ri-label">Seat</div><div class="ri-value mono">${found.seatLabel}</div></div>
+          <div class="result-item"><div class="ri-label">Branch</div><div class="ri-value">${found.branch}</div></div>
+          <div class="result-item"><div class="ri-label">Semester</div><div class="ri-value">${found.semester}</div></div>
+        </div>
+        ${roomGridHtml}
+      </div>
+    `;
+  });
+</script>
+</body>
+</html>

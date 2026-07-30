@@ -1,0 +1,38 @@
+/* Responsive rules — mobile-first overrides layered on top of style.css */
+
+@media (max-width: 1080px) {
+  .card-grid { grid-template-columns: repeat(2, 1fr); }
+  .field-row { grid-template-columns: 1fr; }
+  .main-content { padding: 24px 24px 48px; }
+  .topbar { padding: 14px 24px; }
+}
+
+@media (max-width: 900px) {
+  :root { --sidebar-w: 232px; }
+  .sidebar { transform: translateX(-100%); box-shadow: var(--shadow-lg); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-toggle { display: flex; }
+  .sidebar-scrim.open { display: block; }
+  .main { margin-left: 0; }
+  .topbar { padding-left: 66px; }
+}
+
+@media (max-width: 640px) {
+  .card-grid { grid-template-columns: 1fr; }
+  .quick-actions { grid-template-columns: 1fr !important; }
+  .dash-grid { grid-template-columns: 1fr; }
+  .topbar { flex-wrap: wrap; }
+  .topbar h1 { font-size: 17px; }
+  .main-content { padding: 18px 16px 40px; }
+  table { font-size: 12.5px; }
+  th, td { padding: 9px 10px; }
+  .panel { padding: 18px; }
+  .toast-stack { left: 16px; right: 16px; bottom: 16px; }
+  .toast { min-width: 0; }
+}
+
+@media print {
+  .sidebar, .topbar, .sidebar-toggle, .no-print { display: none !important; }
+  .main { margin-left: 0; }
+  body { background: white; }
+}

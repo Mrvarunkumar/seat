@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics — SESAS</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script src="js/theme.js"></script>
+<style>
+  .bar-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .bar-row .b-label { width:70px; font-family:var(--font-mono); font-size:12px; flex-shrink:0; }
+  .bar-row .b-track { flex:1; height:14px; background: var(--parchment); border-radius:8px; overflow:hidden; }
+  .bar-row .b-fill { height:100%; border-radius:8px; }
+  .bar-row .b-val { width:44px; text-align:right; font-family:var(--font-mono); font-size:12px; color:var(--ink-soft); flex-shrink:0; }
+  .analytics-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+
+  <div class="main">
+    <div id="topbar-mount"></div>
+
+    <div class="main-content">
+      <div id="analyticsCards" class="card-grid mb-24"></div>
+
+      <div class="analytics-grid">
+        <div class="panel fade-up">
+          <div class="panel-head"><div><h3>Branch-wise Distribution</h3><p>Students seated per branch</p></div></div>
+          <div id="branchChart"></div>
+        </div>
+        <div class="panel fade-up fade-up-1">
+          <div class="panel-head"><div><h3>Room Utilization</h3><p>Occupied vs. total capacity</p></div></div>
+          <div id="roomChart"></div>
+        </div>
+      </div>
+
+      <div class="panel fade-up fade-up-2 mt-24">
+        <div class="panel-head"><div><h3>Generation Log</h3><p>Details from the last run</p></div></div>
+        <div class="table-wrap">
+          <table>
+            <tbody id="logTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="noDataAnalytics"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+  requireAuth();
+  window.ACTIVE_PAGE = 'analytics';
+  window.PAGE_TITLE = 'Analytics';
+  window.PAGE_EYEBROW = 'Generate';
+</script>
+<script src="components/sidebar.js"></script>
+<script src="components/navbar.js"></script>
+<script src="components/cards.js"></script>
+<script src="components/modal.js"></script>
+<script src="js/seating.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    const [arrangement, students, rooms] = await Promise.all([
+      Api.getArrangement(),
+      Api.getStudents(),
+      Api.getClassrooms()
+    ]);
+
+    if (!arrangement) {
+      document.querySelectorAll('.panel, #analyticsCards, .analytics-grid').forEach(el => el.style.display = 'none');
+      document.getElementById('noDataAnalytics').innerHTML = emptyState({
+        title: 'Nothing to analyze yet',
+        desc: 'Generate a seating arrangement first to see branch distribution, room utilization and exceptions.',
+        actionHtml: `<a class="btn btn-primary btn-sm" href="generate.html">Go to Generate Seating</a>`
+      });
+      return;
+    }
+
+    const emptySeats = arrangement.totalCapacity - arrangement.seatedCount;
+    const utilPct = Math.round((arrangement.seatedCount / arrangement.totalCapacity) * 100);
+
+    document.getElementById('analyticsCards').innerHTML = [
+      statCard({ label: 'Total Students', value: students.length, filledCells: 10 }),
+      statCard({ label: 'Total Rooms', value: rooms.length, filledCells: 6 }),
+      statCard({ label: 'Room Utilization', value: `${utilPct}%`, sub: `${emptySeats} empty seats`, filledCells: Math.round(utilPct/7) }),
+      statCard({ label: 'Rule Violations', value: arrangement.violations.length, subClass: arrangement.violations.length ? 'warn' : 'up', sub: arrangement.violations.length ? 'Exceptions logged' : 'None', filledCells: arrangement.violations.length ? 2 : 15 }),
+    ].join('');
+
+    const maxBranch = Math.max(...Object.values(arrangement.branchCounts));
+    document.getElementById('branchChart').innerHTML = Object.entries(arrangement.branchCounts).sort((a,b) => b[1]-a[1]).map(([branch, count]) => `
+      <div class="bar-row">
+        <div class="b-label">${branch}</div>
+        <div class="b-track"><div class="b-fill progress-anim" style="width:${(count/maxBranch)*100}%; background:${branchColor(branch)}"></div></div>
+        <div class="b-val">${count}</div>
+      </div>
+    `).join('');
+
+    document.getElementById('roomChart').innerHTML = arrangement.rooms.map(room => {
+      const occ = room.grid.flat().filter(Boolean).length;
+      const pct = Math.round((occ / room.capacity) * 100);
+      return `
+      <div class="bar-row">
+        <div class="b-label">Room ${room.room}</div>
+        <div class="b-track"><div class="b-fill progress-anim" style="width:${pct}%; background:var(--brass)"></div></div>
+        <div class="b-val">${pct}%</div>
+      </div>`;
+    }).join('');
+
+    const logRows = [
+      ['Generated at', new Date(arrangement.generatedAt).toLocaleString('en-IN')],
+      ['Students seated', `${arrangement.seatedCount} / ${arrangement.totalStudents}`],
+      ['Unseated students', arrangement.unseated.length],
+      ['Rooms used', arrangement.rooms.length],
+      ['Total capacity', arrangement.totalCapacity],
+      ['Rule exceptions', arrangement.violations.length],
+    ];
+    document.getElementById('logTable').innerHTML = logRows.map(([k,v]) => `
+      <tr><td style="width:220px; color:var(--ink-soft); font-weight:600;">${k}</td><td class="mono">${v}</td></tr>
+    `).join('');
+  });
+</script>
+</body>
+</html>

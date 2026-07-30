@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seating Rules — SESAS</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+
+  <div class="main">
+    <div id="topbar-mount"></div>
+
+    <div class="main-content" style="max-width:920px;">
+      <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:24px; align-items:start;">
+
+        <div class="panel fade-up">
+          <div class="panel-head">
+            <div><h3>Seating Rules</h3><p>Enable the constraints the allocation engine must respect</p></div>
+          </div>
+          <div id="ruleGroup1"></div>
+          <div class="panel-head mt-24"><div><h4 style="font-family:var(--font-display); font-size:14px;">Bench capacity</h4></div></div>
+          <div id="benchGroup" class="field-row" style="margin-bottom:0;"></div>
+        </div>
+
+        <div class="panel fade-up fade-up-1" style="position:sticky; top:96px;">
+          <div class="panel-head"><div><h3>What this means</h3></div></div>
+          <p class="text-sm text-soft mb-16">A quick read on the rules you've enabled, in plain terms.</p>
+          <ul id="ruleSummary" style="display:flex; flex-direction:column; gap:10px; font-size:13px;"></ul>
+          <button class="btn btn-primary btn-block mt-24" id="saveRulesBtn">Save Rules &amp; Go to Generate</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+  requireAuth();
+  window.ACTIVE_PAGE = 'seating-rules';
+  window.PAGE_TITLE = 'Seating Rules';
+  window.PAGE_EYEBROW = 'Setup';
+</script>
+<script src="components/sidebar.js"></script>
+<script src="components/navbar.js"></script>
+<script src="components/modal.js"></script>
+<script>
+  const RULE_DEFS = [
+    { key: 'separateBranches', title: 'Separate branches', desc: 'Treat each branch as its own queue rather than seating in USN order across all students.' },
+    { key: 'noSameBranchLeftRight', title: 'No same branch left–right', desc: "A student's left and right neighbours must be from a different branch." },
+    { key: 'noSameBranchFrontBack', title: 'No same branch front–back', desc: "A student's front and back neighbours must be from a different branch." },
+    { key: 'alternateBranch', title: 'Alternate branch arrangement', desc: 'Cycle through branches in round-robin order so no branch dominates the seating sequence.' },
+    { key: 'maintainUsnOrder', title: 'Maintain USN order', desc: 'Sort each branch queue by USN before placement (disable to shuffle within branch).' },
+    { key: 'fillRoomCompletely', title: 'Fill room completely', desc: 'Use every seat in a room before moving to the next room.' },
+    { key: 'avoidEmptyBenches', title: 'Avoid empty benches', desc: "Don't leave gaps — pack benches fully rather than spacing students out." },
+    { key: 'randomizeSeats', title: 'Randomize seats', desc: 'Shuffle each branch queue instead of ordering by USN — useful for re-runs.' },
+  ];
+
+  let rules = {};
+
+  async function renderRules() {
+    rules = await Api.getRules();
+    document.getElementById('ruleGroup1').innerHTML = RULE_DEFS.map(r => `
+      <label class="checkline ${rules[r.key] ? 'checked' : ''}" data-key="${r.key}">
+        <input type="checkbox" ${rules[r.key] ? 'checked' : ''}>
+        <div>
+          <div class="cl-title">${r.title}</div>
+          <div class="cl-desc">${r.desc}</div>
+        </div>
+      </label>
+    `).join('');
+
+    document.getElementById('benchGroup').innerHTML = `
+      <label class="checkline ${rules.benchMode === 1 ? 'checked' : ''}" data-bench="1">
+        <input type="radio" name="bench" ${rules.benchMode === 1 ? 'checked' : ''}>
+        <div><div class="cl-title">One student per bench</div><div class="cl-desc">Maximum spacing between students.</div></div>
+      </label>
+      <label class="checkline ${rules.benchMode === 2 ? 'checked' : ''}" data-bench="2">
+        <input type="radio" name="bench" ${rules.benchMode === 2 ? 'checked' : ''}>
+        <div><div class="cl-title">Two students per bench</div><div class="cl-desc">Higher room utilization.</div></div>
+      </label>
+    `;
+
+    bindRuleEvents();
+    renderSummary();
+  }
+
+  function bindRuleEvents() {
+    document.querySelectorAll('[data-key]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        const key = el.dataset.key;
+        rules[key] = !rules[key];
+        el.classList.toggle('checked', rules[key]);
+        el.querySelector('input').checked = rules[key];
+        renderSummary();
+      });
+    });
+    document.querySelectorAll('[data-bench]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        rules.benchMode = parseInt(el.dataset.bench, 10);
+        document.querySelectorAll('[data-bench]').forEach(x => {
+          x.classList.toggle('checked', parseInt(x.dataset.bench, 10) === rules.benchMode);
+          x.querySelector('input').checked = parseInt(x.dataset.bench, 10) === rules.benchMode;
+        });
+        renderSummary();
+      });
+    });
+  }
+
+  function renderSummary() {
+    const active = RULE_DEFS.filter(r => rules[r.key]);
+    const list = document.getElementById('ruleSummary');
+    if (!active.length) {
+      list.innerHTML = `<li class="text-soft">No rules enabled — students will be seated in plain USN order with no adjacency checks.</li>`;
+      return;
+    }
+    list.innerHTML = active.map(r => `
+      <li style="display:flex; gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--pine)" stroke-width="2.2" style="flex-shrink:0; margin-top:2px;"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>${r.title}</span>
+      </li>
+    `).join('') + `<li style="display:flex; gap:8px; padding-top:10px; border-top:1px solid var(--line);">
+        <span class="text-soft">Bench mode: <strong style="color:var(--ink)">${rules.benchMode === 2 ? 'Two per bench' : 'One per bench'}</strong></span>
+      </li>`;
+  }
+
+  document.addEventListener('DOMContentLoaded', renderRules);
+
+  document.getElementById('saveRulesBtn').addEventListener('click', async () => {
+    await Api.saveRules(rules);
+    showToast('Seating rules saved', 'success');
+    setTimeout(() => { window.location.href = 'generate.html'; }, 600);
+  });
+</script>
+</body>
+</html>
