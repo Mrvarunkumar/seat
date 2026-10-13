@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 from typing import List, Dict, Any, Optional
-from models import College, Student, Classroom, Exam, Rules, LoginRequest
+from models import College, Student, Classroom, Exam, Rules, LoginRequest, Invigilator
 from datetime import datetime
 
 load_dotenv()
@@ -208,6 +208,17 @@ def get_exams():
         print(f"Error reading exams: {e}")
         return []
 
+@app.delete("/api/exams/{exam_id}")
+def delete_exam(exam_id: str):
+    if not supabase:
+        return {}
+    try:
+        supabase.table("exams").delete().eq("id", exam_id).execute()
+        log_activity(f"Deleted exam {exam_id}")
+    except Exception as e:
+        print(f"Error deleting exam: {e}")
+    return {}
+
 @app.post("/api/exams")
 def add_exam(exam: Exam):
     if not supabase: return exam.model_dump()
@@ -259,6 +270,50 @@ def get_invigilators():
         print(f"Error reading invigilators: {e}")
         return []
 
+def _save_invigilator_record(inv: Invigilator):
+    if not supabase:
+        return inv.model_dump()
+    try:
+        faculty = (inv.faculty or '').strip()
+        time_val = (inv.time or '').strip()
+        # An empty assignment removes any existing record for the room.
+        if not faculty and not time_val:
+            supabase.table("invigilators").delete().eq("room", inv.room).execute()
+            return inv.model_dump()
+        existing = supabase.table("invigilators").select("id").eq("room", inv.room).execute()
+        if existing.data:
+            supabase.table("invigilators").update({"faculty": faculty, "time": time_val}).eq("room", inv.room).execute()
+        else:
+            supabase.table("invigilators").insert({"room": inv.room, "faculty": faculty, "time": time_val}).execute()
+        log_activity(f"Assigned invigilator for room {inv.room}")
+    except Exception as e:
+        print(f"Error saving invigilator: {e}")
+    return inv.model_dump()
+
+@app.post("/api/invigilators")
+def save_invigilator(inv: Invigilator):
+    return _save_invigilator_record(inv)
+
+@app.put("/api/invigilators/{room}")
+def update_invigilator(room: str, patch: Dict[str, Any]):
+    inv = Invigilator(
+        room=room,
+        faculty=patch.get("faculty", "") if "faculty" in patch else (patch.get("facultyName", "") if "facultyName" in patch else ""),
+        time=patch.get("time", "") if "time" in patch else (patch.get("dutyTime", "") if "dutyTime" in patch else "")
+    )
+    return _save_invigilator_record(inv)
+
+@app.delete("/api/invigilators/{room}")
+def delete_invigilator(room: str):
+    if not supabase:
+        return {}
+    try:
+        supabase.table("invigilators").delete().eq("room", room).execute()
+        log_activity(f"Removed invigilator for room {room}")
+    except Exception as e:
+        print(f"Error deleting invigilator: {e}")
+    return {}
+
 @app.get("/api/arrangement")
 def get_arrangement():
     if not supabase: return None
@@ -279,6 +334,17 @@ def save_arrangement(result: Dict[str, Any]):
     except Exception as e:
         print(f"Error saving arrangement: {e}")
     return result
+
+@app.delete("/api/arrangement")
+def delete_arrangement():
+    if not supabase:
+        return {}
+    try:
+        supabase.table("arrangements").delete().neq("id", 0).execute()
+        log_activity("Deleted seating arrangement")
+    except Exception as e:
+        print(f"Error deleting arrangement: {e}")
+    return {}
 
 @app.get("/api/activity")
 def get_activity():

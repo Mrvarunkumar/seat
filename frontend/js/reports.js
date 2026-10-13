@@ -200,12 +200,17 @@ async function renderInvigilatorReport(arrangement) {
   const invigilators = await Api.getInvigilators();
   const rows = arrangement.rooms.map(room => {
     const inv = invigilators.find(i => i.room === room.room) || { faculty: 'Unassigned', time: '—' };
+    const displayFaculty = inv.faculty || 'Unassigned';
+    const displayTime = inv.time && inv.time !== '—' ? inv.time : '—';
     return `
       <tr>
         <td class="mono">${escapeHtml(room.room)}</td>
-        <td>${escapeHtml(inv.faculty)}</td>
-        <td>${escapeHtml(inv.time)}</td>
+        <td>${escapeHtml(displayFaculty)}</td>
+        <td>${escapeHtml(displayTime)}</td>
         <td>${room.grid.flat().filter(Boolean).length} students</td>
+        <td>
+          <button class="btn btn-outline btn-sm" data-assign-inv="${escapeHtml(room.room)}">Assign</button>
+        </td>
       </tr>`;
   }).join('');
 
@@ -217,12 +222,44 @@ async function renderInvigilatorReport(arrangement) {
     <div class="panel">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Room</th><th>Faculty</th><th>Duty Time</th><th>Students</th></tr></thead>
+          <thead><tr><th>Room</th><th>Faculty</th><th>Duty Time</th><th>Students</th><th>Actions</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
+      <p class="text-soft text-sm" style="margin-top:12px;">Assigning an invigilator is optional. Rooms left unassigned still export normally.</p>
     </div>
   `;
+
+  document.querySelectorAll('[data-assign-inv]').forEach(btn => {
+    btn.addEventListener('click', () => openAssignInvigilator(btn.dataset.assignInv, arrangement));
+  });
+}
+
+async function openAssignInvigilator(roomId, arrangement) {
+  const invigilators = await Api.getInvigilators();
+  const inv = invigilators.find(i => i.room === roomId) || { faculty: '', time: '' };
+  openModal({
+    title: `Assign Invigilator — Room ${roomId}`,
+    bodyHtml: `
+      <div class="field">
+        <label>Faculty Name</label>
+        <input type="text" id="invFaculty" value="${escapeHtml(inv.faculty || '')}" placeholder="Optional">
+      </div>
+      <div class="field">
+        <label>Duty Time</label>
+        <input type="time" id="invTime" value="${escapeHtml(inv.time || '')}">
+      </div>
+      <p class="hint">Leave both blank to keep this room unassigned. Not compulsory.</p>
+    `,
+    confirmText: 'Save',
+    onConfirm: async () => {
+      const faculty = document.getElementById('invFaculty').value.trim();
+      const time = document.getElementById('invTime').value;
+      await Api.saveInvigilator({ room: roomId, faculty, time });
+      await renderReports();
+      showToast('Invigilator saved', 'success');
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

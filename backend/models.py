@@ -48,3 +48,8 @@ class LoginRequest(BaseModel):
     password: str
     role: Optional[str] = None
 
+class Invigilator(BaseModel):
+    room: str
+    faculty: str = ''
+    time: str = ''
+

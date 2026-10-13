@@ -58,6 +58,7 @@ const Api = {
   /* ---- Exams ---- */
   async getExams() { return await apiFetch('/exams'); },
   async addExam(exam) { return await apiFetch('/exams', { method: 'POST', body: JSON.stringify(exam) }); },
+  async deleteExam(id) { return await apiFetch(`/exams/${encodeURIComponent(id)}`, { method: 'DELETE' }); },
 
   /* ---- Rules ---- */
   async getRules() { return await apiFetch('/rules'); },
@@ -65,10 +66,14 @@ const Api = {
 
   /* ---- Invigilators ---- */
   async getInvigilators() { return await apiFetch('/invigilators'); },
+  async saveInvigilator(inv) { return await apiFetch('/invigilators', { method: 'POST', body: JSON.stringify(inv) }); },
+  async updateInvigilator(room, patch) { return await apiFetch(`/invigilators/${encodeURIComponent(room)}`, { method: 'PUT', body: JSON.stringify(patch) }); },
+  async deleteInvigilator(room) { return await apiFetch(`/invigilators/${encodeURIComponent(room)}`, { method: 'DELETE' }); },
 
   /* ---- Arrangement result ---- */
   async getArrangement() { return await apiFetch('/arrangement'); },
   async saveArrangement(result) { return await apiFetch('/arrangement', { method: 'POST', body: JSON.stringify(result) }); },
+  async deleteArrangement() { return await apiFetch('/arrangement', { method: 'DELETE' }); },
 
   /* ---- Activity feed ---- */
   async getActivity() { return await apiFetch('/activity'); },

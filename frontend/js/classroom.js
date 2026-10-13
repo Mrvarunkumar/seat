@@ -1,7 +1,7 @@
 /* classroom.js — wires up classrooms.html */
 
 async function renderClassroomTable() {
-  const allRooms = await Api.getClassrooms();
+  const [allRooms, invigilators] = await Promise.all([Api.getClassrooms(), Api.getInvigilators()]);
   const rooms = allRooms.sort((a, b) => a.room.localeCompare(b.room));
   const tbody = document.getElementById('roomTbody');
   const empty = document.getElementById('roomEmpty');
@@ -18,12 +18,18 @@ async function renderClassroomTable() {
   table.style.display = 'table';
   empty.style.display = 'none';
 
-  tbody.innerHTML = rooms.map(r => `
+  tbody.innerHTML = rooms.map(r => {
+    const inv = invigilators.find(i => i.room === r.room);
+    const invText = inv && inv.faculty
+      ? `${escapeHtml(inv.faculty)}${inv.time ? ` · ${escapeHtml(inv.time)}` : ''}`
+      : '<span class="text-soft">Unassigned</span>';
+    return `
     <tr>
       <td class="mono">${escapeHtml(r.room)}</td>
       <td>${r.rows} × ${r.cols}</td>
       <td>${r.capacity}</td>
       <td><span class="badge badge-neutral">${r.benchCapacity} / bench</span></td>
+      <td>${invText}</td>
       <td>
         <div class="flex gap-8">
           <button class="icon-btn" data-edit="${r.room}" title="Edit" aria-label="Edit">
@@ -35,12 +41,14 @@ async function renderClassroomTable() {
         </div>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   tbody.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', () => openEditRoom(btn.dataset.edit)));
   tbody.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', async () => {
     if (confirm(`Remove Room ${btn.dataset.del}?`)) {
       await Api.deleteClassroom(btn.dataset.del);
+      await Api.deleteInvigilator(btn.dataset.del).catch(() => {});
       await renderClassroomTable();
       showToast('Room removed', 'success');
     }
@@ -71,6 +79,17 @@ function roomFormHtml(room = {}) {
       </select>
       <p class="hint">Capacity is calculated automatically as rows × columns.</p>
     </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Invigilator (Faculty)</label>
+        <input type="text" id="fFaculty" value="${escapeHtml(room.faculty || '')}" placeholder="Optional">
+      </div>
+      <div class="field">
+        <label>Duty Time</label>
+        <input type="time" id="fTime" value="${escapeHtml(room.time || '')}">
+      </div>
+    </div>
+    <p class="hint">Optional. Leave blank to leave this room unassigned; can also be assigned from Reports.</p>
   `;
 }
 
@@ -84,10 +103,13 @@ async function openAddRoom() {
       const rows = parseInt(document.getElementById('fRows').value, 10) || 1;
       const cols = parseInt(document.getElementById('fCols').value, 10) || 1;
       const benchCapacity = parseInt(document.getElementById('fBench').value, 10);
+      const faculty = document.getElementById('fFaculty').value.trim();
+      const time = document.getElementById('fTime').value;
       if (!room) { showToast('Enter a room number', 'error'); return false; }
       const existingRooms = await Api.getClassrooms();
       if (existingRooms.some(r => r.room === room)) { showToast('Room already exists', 'error'); return false; }
       await Api.addClassroom({ room, rows, cols, capacity: rows * cols, benchCapacity });
+      await Api.saveInvigilator({ room, faculty, time }).catch(() => {});
       await renderClassroomTable();
       showToast('Room added', 'success');
     }
@@ -95,18 +117,23 @@ async function openAddRoom() {
 }
 
 async function openEditRoom(roomId) {
-  const allRooms = await Api.getClassrooms();
+  const [allRooms, invigilators] = await Promise.all([Api.getClassrooms(), Api.getInvigilators()]);
   const room = allRooms.find(r => r.room === roomId);
   if (!room) return;
+  const inv = invigilators.find(i => i.room === roomId) || {};
+  const roomWithInv = { ...room, faculty: inv.faculty || '', time: inv.time || '' };
   openModal({
     title: `Edit Room ${roomId}`,
-    bodyHtml: roomFormHtml(room),
+    bodyHtml: roomFormHtml(roomWithInv),
     confirmText: 'Save Changes',
     onConfirm: async () => {
       const rows = parseInt(document.getElementById('fRows').value, 10) || 1;
       const cols = parseInt(document.getElementById('fCols').value, 10) || 1;
       const benchCapacity = parseInt(document.getElementById('fBench').value, 10);
+      const faculty = document.getElementById('fFaculty').value.trim();
+      const time = document.getElementById('fTime').value;
       await Api.updateClassroom(roomId, { rows, cols, capacity: rows * cols, benchCapacity });
+      await Api.saveInvigilator({ room: roomId, faculty, time }).catch(() => {});
       await renderClassroomTable();
       showToast('Room updated', 'success');
     }

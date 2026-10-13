@@ -86,11 +86,43 @@
 <script>
   async function renderSideList() {
     const exams = await Api.getExams();
-    document.getElementById('examListSide').innerHTML = exams.length
-      ? exams.map(examRow).join('')
-      : emptyState({ title: 'No exams yet', desc: 'Create your first exam using the form.' });
+    const list = document.getElementById('examListSide');
+    if (!exams.length) {
+      list.innerHTML = emptyState({ title: 'No exams yet', desc: 'Create your first exam using the form.' });
+      return;
+    }
+    list.innerHTML = exams.map(e => `
+      <div class="exam-row" data-exam-id="${escapeHtml(e.id)}">
+        <div class="exam-date"><div class="d">${(() => { const d = new Date(e.date + 'T00:00:00'); return isNaN(d) ? '--' : d.getDate(); })()}</div><div class="m">${(() => { const d = new Date(e.date + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short' }); })()}</div></div>
+        <div class="exam-info">
+          <div class="name">${escapeHtml(e.name)}</div>
+          <div class="meta">${escapeHtml(e.subjectCode || '')} · ${escapeHtml(e.time || '')}</div>
+        </div>
+        <button type="button" class="icon-btn" data-del-exam="${escapeHtml(e.id)}" title="Delete exam" aria-label="Delete exam">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>
+        </button>
+      </div>
+    `).join('');
+
   }
-  document.addEventListener('DOMContentLoaded', renderSideList);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderSideList();
+
+    const list = document.getElementById('examListSide');
+    list.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-del-exam]');
+      if (!btn) return;
+      if (!confirm('Delete this exam?')) return;
+      try {
+        await Api.deleteExam(btn.dataset.delExam);
+        showToast('Exam deleted', 'success');
+        await renderSideList();
+      } catch (err) {
+        showToast((err && err.message) || 'Failed to delete exam', 'error');
+      }
+    });
+  });
 
   document.getElementById('examForm').addEventListener('submit', async (e) => {
     e.preventDefault();

@@ -71,6 +71,7 @@
           <div class="panel-head">
             <div><h3>Room Preview</h3><p>Hover a seat to see student details</p></div>
             <div class="flex gap-8">
+              <button type="button" class="btn btn-outline btn-sm" id="deleteArrangementBtn">Delete Arrangement</button>
               <a href="reports.html" class="btn btn-outline btn-sm">View Reports</a>
               <a href="analytics.html" class="btn btn-outline btn-sm">View Analytics</a>
             </div>
@@ -175,6 +176,20 @@
     await refreshDataCheck();
     const existing = await Api.getArrangement();
     if (existing) renderResults(existing);
+
+    const deleteBtn = document.getElementById('deleteArrangementBtn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (!confirm('Delete the current seating arrangement?')) return;
+        try {
+          await Api.deleteArrangement();
+          document.getElementById('resultsWrap').style.display = 'none';
+          showToast('Seating arrangement deleted', 'success');
+        } catch (e) {
+          showToast((e && e.message) || 'Failed to delete arrangement', 'error');
+        }
+      });
+    }
   });
 
   document.getElementById('generateBtn').addEventListener('click', async () => {
